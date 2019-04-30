@@ -1,0 +1,144 @@
+from sklearn.datasets import load_breast_cancer
+cancer = load_breast_cancer()
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import seaborn as sns
+
+
+print(cancer.DESCR)
+
+"""
+A) the data-set has 30 features, a result of calculating the mean, st.dev and and "Worst"/largest (mean of the 3 
+largest values) of the original 10 features. 
+
+B) there are 569 instances
+
+C) out of the 569 instances, the distribution of malignant vs benign was as follows
+    Malignant:  212
+    Benign:     357
+"""
+
+print("===============================================")
+print("The amount of feature is 30")
+print("The amount of instances is 569")
+print ("The amount of benign cancer is",len(cancer.data[cancer.target==1]))
+print ("The amount of malignang cancer is",len(cancer.data[cancer.target==0]))
+
+
+
+print(cancer.target_names)
+
+# Exercise 5.D
+
+# Here we plotting the charts, separated by the two classes malignant and benign. In order to do so, we created a loop. 
+
+cancer_df = pd.DataFrame(cancer.data, columns=cancer.feature_names)
+l = list(cancer_df)
+
+mal_df = pd.DataFrame(cancer.data[cancer.target == 0], columns=cancer.feature_names)
+ben_df = pd.DataFrame(cancer.data[cancer.target == 1], columns=cancer.feature_names)
+
+f = plt.figure()
+# plt.legend('malignant', 'benign', loc = 'upper left')
+for i in range(len(l)):
+    plt.subplot(10, 3, i+1)
+    plt.hist(x=mal_df[l[i]], bins=30, color='red', alpha=0.35)
+    plt.hist(x=ben_df[l[i]], bins=30, color='green', alpha=0.35)
+    plt.title(l[i], fontsize=4)
+    plt.xticks([])
+    plt.yticks([])
+plt.show()
+f.savefig("foo.pdf", bbox_inches='tight')
+
+
+# Exercise 5.E
+
+# Plotting the charts as stated in the instructions
+
+plt.subplot(1, 2, 1) 
+plt.scatter(cancer_df['worst symmetry'], cancer_df['worst texture'], s=cancer_df['worst area'] * 0.05,
+            color='magenta', label='check', alpha=0.3)
+plt.xlabel('Worst Symmetry', fontsize=12)
+plt.ylabel('Worst Texture', fontsize=12)
+plt.subplot(1, 2, 2)
+plt.scatter(cancer_df['mean radius'], cancer_df['mean concave points'], s=cancer_df['mean area'] * 0.05,
+            color='green', label='check', alpha=0.3)
+plt.xlabel('Mean Radius', fontsize=12)
+plt.ylabel('Mean Concave Points', fontsize=12)
+plt.tight_layout()
+plt.show()
+
+
+
+#Exercise 5.F
+
+corr=cancer_df[cancer_df.columns].corr()
+
+top_corr_features = corr.index
+plt.figure(figsize=(20,20))
+g=sns.heatmap(cancer_df[top_corr_features].corr(),annot=True,cmap="RdYlGn")
+
+# Based on the correlation matrix, we choose the least correlated factors between themselves: Mean texture, Mean symmetry, Mean Fractal dimension
+
+new_cancer = cancer_df[['mean texture', 'mean symmetry', 'mean fractal dimension']]
+new_mal = mal_df[['mean texture', 'mean symmetry', 'mean fractal dimension']]
+new_ben = ben_df[['mean texture', 'mean symmetry', 'mean fractal dimension']]
+
+
+#Excercise 5.G
+
+# We plot the chart based on the new independant variables. We see here that they are indeed uncorrelated. 
+
+plt.scatter(new_cancer['mean fractal dimension'], new_cancer['mean texture'], s=new_cancer['mean symmetry']*150,
+            color='blue', label='check', alpha=0.3)
+plt.xlabel('Mean fractal dimension', fontsize=12)
+plt.ylabel('Mean texture', fontsize=12)
+plt.show()
+
+cancer_std = StandardScaler().fit_transform(cancer_df) # Standardizing the data
+
+
+# Exercise 5.H
+
+# Implementing the PCA function
+pca = PCA(n_components=3)
+pca.fit(cancer_std)
+X_pca=pca.transform(cancer_std)
+print ("shape of X_pca", X_pca.shape)
+
+
+# Exercise 5.I
+
+print(pca.explained_variance_ratio_)
+
+# Wee se here that the 3rd component only add 9% of explanation. If we use only 2 components, the explanation ratio amounts to 63 %.
+# Therefore, we could imagine using only 2 components as the 3rd increment wouldn't add that much explanation. 
+
+
+#Exercise 5.J
+
+# Here we need to separate the PC in malignant and benign in order to plot the chart. Unfortunately, we see that the axis of the chart
+# somehow different than the one in the assignement sheet. 
+
+pca = PCA(n_components=2)
+pca.fit(cancer_std)
+X_pca=pca.transform(cancer_std)
+
+PCAx=pd.DataFrame(X_pca)
+target_df=pd.DataFrame(cancer.target, columns=['Diagnosis'])
+datas=PCAx.join(target_df)
+
+dataBenign=datas[datas['Diagnosis'] ==1]
+dataMalignant=datas[datas['Diagnosis'] ==0]
+
+
+plt.scatter(dataMalignant[0], dataMalignant[1], color='red', label='Malignant', alpha=0.3, marker='*')
+plt.scatter(dataBenign[0], dataBenign[1], color='green', label='Benign', alpha=0.3)
+plt.legend(loc='upper right');
+plt.xlabel('First Principal Component', fontsize=12)
+plt.ylabel('Second Principal Component', fontsize=12)
+plt.show()
